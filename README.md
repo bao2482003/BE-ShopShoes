@@ -25,6 +25,16 @@ src/
 
 - Authentication: register, login, get profile (`JWT`)
 - Authorization: role based (`ADMIN`, `USER`)
+- Data model normalized to 9 entities:
+  - `users`
+  - `brands`
+  - `categories`
+  - `products`
+  - `product_variants`
+  - `carts`
+  - `cart_items`
+  - `orders`
+  - `order_items`
 - Product CRUD
   - `GET /api/products` public
   - `POST/PUT/DELETE /api/products` only `ADMIN`
@@ -41,6 +51,7 @@ npm install
 2. Create DB and tables
 
 - Run SQL script in `src/utils/schema.sql`
+- If your database already has old 2-table structure, recreate DB or run migrations before starting.
 
 3. Configure env
 

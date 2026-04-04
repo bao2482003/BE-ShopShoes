@@ -1,6 +1,20 @@
 CREATE DATABASE IF NOT EXISTS shop_shoes;
 USE shop_shoes;
 
+CREATE TABLE IF NOT EXISTS brands (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(120) NOT NULL UNIQUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS categories (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(120) NOT NULL UNIQUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   full_name VARCHAR(120) NOT NULL,
@@ -13,13 +27,74 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS products (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(150) NOT NULL,
-  brand VARCHAR(120) NOT NULL,
+  brand_id INT NOT NULL,
+  category_id INT NOT NULL,
   price DECIMAL(10,2) NOT NULL,
   stock INT NOT NULL DEFAULT 0,
   description TEXT,
   image_url VARCHAR(255),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (brand_id) REFERENCES brands(id),
+  FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+
+CREATE TABLE IF NOT EXISTS product_variants (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  product_id INT NOT NULL,
+  sku VARCHAR(80) NOT NULL UNIQUE,
+  size VARCHAR(20) NOT NULL,
+  color VARCHAR(50),
+  stock INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS carts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL UNIQUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS cart_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  cart_id INT NOT NULL,
+  variant_id INT NOT NULL,
+  quantity INT NOT NULL DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (cart_id) REFERENCES carts(id) ON DELETE CASCADE,
+  FOREIGN KEY (variant_id) REFERENCES product_variants(id),
+  UNIQUE KEY uk_cart_variant (cart_id, variant_id)
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  status ENUM('PENDING', 'PAID', 'SHIPPING', 'COMPLETED', 'CANCELLED') DEFAULT 'PENDING',
+  total_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+  shipping_address VARCHAR(255) NOT NULL,
+  phone_number VARCHAR(20) NOT NULL,
+  note TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id INT NOT NULL,
+  variant_id INT NOT NULL,
+  quantity INT NOT NULL,
+  unit_price DECIMAL(10,2) NOT NULL,
+  subtotal DECIMAL(12,2) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+  FOREIGN KEY (variant_id) REFERENCES product_variants(id)
 );
 
 -- Password for this seed account: Admin@123
@@ -35,50 +110,65 @@ ON DUPLICATE KEY UPDATE
   password = VALUES(password),
   role = VALUES(role);
 
-INSERT INTO products (name, brand, price, stock, description, image_url)
+INSERT INTO brands (name)
+VALUES ('Nike'), ('Adidas'), ('Puma'), ('Mizuno')
+ON DUPLICATE KEY UPDATE
+  name = VALUES(name);
+
+INSERT INTO categories (name)
+VALUES ('Football Shoes')
+ON DUPLICATE KEY UPDATE
+  name = VALUES(name);
+
+INSERT INTO products (name, brand_id, category_id, price, stock, description, image_url)
 VALUES (
   'Mercurial Vapor 15 Academy TF',
-  'Nike',
+  (SELECT id FROM brands WHERE name = 'Nike' LIMIT 1),
+  (SELECT id FROM categories WHERE name = 'Football Shoes' LIMIT 1),
   1890000.00,
   20,
   'Giay da bong san co nhan tao toc do, om chan.',
   '/uploads/nike-vapor-15.jpg'
 );
 
-INSERT INTO products (name, brand, price, stock, description, image_url)
+INSERT INTO products (name, brand_id, category_id, price, stock, description, image_url)
 VALUES (
   'Predator Accuracy.3 TF',
-  'Adidas',
+  (SELECT id FROM brands WHERE name = 'Adidas' LIMIT 1),
+  (SELECT id FROM categories WHERE name = 'Football Shoes' LIMIT 1),
   1750000.00,
   15,
   'Giay da bong kiem soat bong tot, de cao su bam san.',
   '/uploads/adidas-predator.jpg'
 );
 
-INSERT INTO products (name, brand, price, stock, description, image_url)
+INSERT INTO products (name, brand_id, category_id, price, stock, description, image_url)
 VALUES (
   'Future 7 Match TT',
-  'Puma',
+  (SELECT id FROM brands WHERE name = 'Puma' LIMIT 1),
+  (SELECT id FROM categories WHERE name = 'Football Shoes' LIMIT 1),
   1690000.00,
   18,
   'Thiet ke co gian, phu hop cho choi bong phong trao.',
   '/uploads/puma-future-7.jpg'
 );
 
-INSERT INTO products (name, brand, price, stock, description, image_url)
+INSERT INTO products (name, brand_id, category_id, price, stock, description, image_url)
 VALUES (
   'Mizuno Monarcida Neo Select AS',
-  'Mizuno',
+  (SELECT id FROM brands WHERE name = 'Mizuno' LIMIT 1),
+  (SELECT id FROM categories WHERE name = 'Football Shoes' LIMIT 1),
   1450000.00,
   12,
   'Chat lieu ben bi, form dang chan nguoi Viet.',
   '/uploads/mizuno-monarcida.jpg'
 );
 
-INSERT INTO products (name, brand, price, stock, description, image_url)
+INSERT INTO products (name, brand_id, category_id, price, stock, description, image_url)
 VALUES (
   'Tiempo Legend 10 Club TF',
-  'Nike',
+  (SELECT id FROM brands WHERE name = 'Nike' LIMIT 1),
+  (SELECT id FROM categories WHERE name = 'Football Shoes' LIMIT 1),
   1390000.00,
   25,
   'Mau giay co dien, phoi mau de mang va de phoi do.',

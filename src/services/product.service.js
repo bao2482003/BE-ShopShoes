@@ -35,6 +35,7 @@ const update = async (id, payload) => {
   const mapped = {
     name: payload.name,
     brand: payload.brand,
+    category: payload.category,
     price: payload.price,
     stock: payload.stock,
     description: payload.description,

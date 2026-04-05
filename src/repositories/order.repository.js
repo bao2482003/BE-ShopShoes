@@ -5,8 +5,67 @@ const getOrderById = async (id) => {
   return rows[0] || null;
 };
 
+const ORDER_WITH_PAYMENT_SELECT = `
+  SELECT
+    o.*,
+    p.id AS payment_id,
+    p.method AS payment_method,
+    p.status AS payment_status,
+    p.amount AS payment_amount,
+    p.transaction_ref AS payment_transaction_ref,
+    p.paid_at AS payment_paid_at,
+    p.created_at AS payment_created_at,
+    p.updated_at AS payment_updated_at
+  FROM orders o
+  LEFT JOIN payments p ON p.order_id = o.id
+`;
+
+const getOrdersByUserId = async (userId) => {
+  const [rows] = await pool.query(
+    `${ORDER_WITH_PAYMENT_SELECT} WHERE o.user_id = ? ORDER BY o.created_at DESC`,
+    [userId]
+  );
+  return rows;
+};
+
+const getOrderByIdAndUserId = async (id, userId) => {
+  const [rows] = await pool.query(
+    `${ORDER_WITH_PAYMENT_SELECT} WHERE o.id = ? AND o.user_id = ? LIMIT 1`,
+    [id, userId]
+  );
+  return rows[0] || null;
+};
+
+const getOrdersForDelivery = async () => {
+  const [rows] = await pool.query(
+    `
+    SELECT
+      o.*,
+      u.full_name AS customer_name,
+      u.email AS customer_email,
+      p.method AS payment_method,
+      p.status AS payment_status
+    FROM orders o
+    JOIN users u ON u.id = o.user_id
+    LEFT JOIN payments p ON p.order_id = o.id
+    WHERE o.status IN ('PENDING', 'PAID', 'SHIPPING', 'WAITING_RECEIVED', 'COMPLETED', 'DONE')
+    ORDER BY o.created_at DESC
+    `
+  );
+
+  return rows;
+};
+
 const updateOrderStatus = async (id, status) => {
   await pool.query("UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [status, id]);
+  return getOrderById(id);
+};
+
+const updateDeliveryStatus = async (id, status) => {
+  await pool.query(
+    "UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status IN ('PENDING', 'PAID', 'SHIPPING', 'WAITING_RECEIVED', 'COMPLETED')",
+    [status, id]
+  );
   return getOrderById(id);
 };
 
@@ -117,6 +176,10 @@ const createOrderFromCart = async ({ userId, shippingAddress, phoneNumber, note,
 
 module.exports = {
   getOrderById,
+  getOrdersByUserId,
+  getOrderByIdAndUserId,
+  getOrdersForDelivery,
   updateOrderStatus,
+  updateDeliveryStatus,
   createOrderFromCart
 };

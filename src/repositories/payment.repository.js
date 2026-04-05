@@ -51,10 +51,26 @@ const markPaymentFailed = async ({ orderId, vnpTransactionNo, vnpResponseCode })
   return getPaymentByOrderId(orderId);
 };
 
+const markPaymentDone = async (orderId) => {
+  await pool.query(
+    `
+    UPDATE payments
+    SET status = 'DONE',
+        paid_at = COALESCE(paid_at, NOW()),
+        updated_at = CURRENT_TIMESTAMP
+    WHERE order_id = ?
+    `,
+    [orderId]
+  );
+
+  return getPaymentByOrderId(orderId);
+};
+
 module.exports = {
   getPaymentByOrderId,
   getPaymentByTransactionRef,
   updatePaymentGatewayUrl,
   markPaymentPaid,
-  markPaymentFailed
+  markPaymentFailed,
+  markPaymentDone
 };

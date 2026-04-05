@@ -19,6 +19,13 @@ const checkoutValidation = [
     .withMessage("paymentMethod must be COD or VNPAY")
 ];
 
+const updateDeliveryStatusValidation = [
+  body("status")
+    .isIn(["SHIPPING", "WAITING_RECEIVED"])
+    .withMessage("status must be SHIPPING or WAITING_RECEIVED")
+];
+
 module.exports = {
-  checkoutValidation
+  checkoutValidation,
+  updateDeliveryStatusValidation
 };

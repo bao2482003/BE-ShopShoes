@@ -3,12 +3,21 @@ const ApiError = require("../utils/apiError");
 const { toOrderResponse } = require("../models/order.model");
 const { toPaymentResponse } = require("../models/payment.model");
 const { buildPaymentUrl, verifyReturnParams } = require("../utils/vnpay");
-const { createOrderFromCart, getOrderById, updateOrderStatus } = require("../repositories/order.repository");
+const {
+  createOrderFromCart,
+  getOrderById,
+  getOrdersByUserId,
+  getOrderByIdAndUserId,
+  updateOrderStatus,
+  getOrdersForDelivery,
+  updateDeliveryStatus
+} = require("../repositories/order.repository");
 const {
   getPaymentByTransactionRef,
   updatePaymentGatewayUrl,
   markPaymentPaid,
-  markPaymentFailed
+  markPaymentFailed,
+  markPaymentDone
 } = require("../repositories/payment.repository");
 
 const createTransactionRef = () => `ORD${Date.now()}${crypto.randomInt(100, 999)}`;
@@ -150,8 +159,101 @@ const getOrderSummary = async (orderId) => {
   return toOrderResponse(order);
 };
 
+const mapOrderHistoryRow = (row) => {
+  const order = toOrderResponse(row);
+
+  const payment = row.payment_id
+    ? {
+        id: row.payment_id,
+        orderId: row.id,
+        method: row.payment_method,
+        status: row.payment_status,
+        amount: Number(row.payment_amount),
+        transactionRef: row.payment_transaction_ref,
+        paidAt: row.payment_paid_at,
+        createdAt: row.payment_created_at,
+        updatedAt: row.payment_updated_at
+      }
+    : null;
+
+  return {
+    order,
+    payment
+  };
+};
+
+const listMyOrders = async (userId) => {
+  const rows = await getOrdersByUserId(userId);
+  return rows.map(mapOrderHistoryRow);
+};
+
+const getMyOrder = async (userId, orderId) => {
+  const row = await getOrderByIdAndUserId(orderId, userId);
+  if (!row) {
+    throw new ApiError(404, "Order not found");
+  }
+  return mapOrderHistoryRow(row);
+};
+
+const listDeliveryOrders = async () => {
+  const rows = await getOrdersForDelivery();
+  return rows.map((row) => ({
+    order: toOrderResponse(row),
+    customer: {
+      name: row.customer_name,
+      email: row.customer_email
+    },
+    payment: {
+      method: row.payment_method,
+      status: row.payment_status
+    }
+  }));
+};
+
+const setDeliveryStatus = async (orderId, status) => {
+  const order = await getOrderById(orderId);
+  if (!order) {
+    throw new ApiError(404, "Order not found");
+  }
+
+  if (!["SHIPPING", "WAITING_RECEIVED"].includes(status)) {
+    throw new ApiError(400, "delivery status must be SHIPPING or WAITING_RECEIVED");
+  }
+
+  const updated = await updateDeliveryStatus(orderId, status);
+  if (!updated) {
+    throw new ApiError(400, "Cannot update delivery status for this order");
+  }
+
+  return toOrderResponse(updated);
+};
+
+const confirmReceived = async (userId, orderId) => {
+  const row = await getOrderByIdAndUserId(orderId, userId);
+  if (!row) {
+    throw new ApiError(404, "Order not found");
+  }
+
+  if (!["WAITING_RECEIVED", "COMPLETED"].includes(row.status)) {
+    throw new ApiError(400, "Only waiting confirmation orders can be confirmed");
+  }
+
+  const updated = await updateOrderStatus(orderId, "DONE");
+  if (!updated) {
+    throw new ApiError(400, "Cannot confirm this order");
+  }
+
+  await markPaymentDone(orderId);
+  return toOrderResponse(updated);
+};
+
 module.exports = {
   checkout,
   handleVnpayReturn,
-  getOrderSummary
+  getOrderSummary,
+  listMyOrders,
+  getMyOrder,
+  listDeliveryOrders,
+  setDeliveryStatus,
+  confirmReceived
 };

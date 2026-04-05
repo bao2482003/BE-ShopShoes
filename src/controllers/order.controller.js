@@ -23,6 +23,56 @@ const checkout = async (req, res, next) => {
   }
 };
 
+const getMyOrders = async (req, res, next) => {
+  try {
+    const data = await orderService.listMyOrders(req.user.id);
+    res.json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getMyOrder = async (req, res, next) => {
+  try {
+    const data = await orderService.getMyOrder(req.user.id, Number(req.params.id));
+    res.json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getDeliveryOrders = async (req, res, next) => {
+  try {
+    const data = await orderService.listDeliveryOrders();
+    res.json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateDeliveryStatus = async (req, res, next) => {
+  try {
+    const data = await orderService.setDeliveryStatus(Number(req.params.id), req.body.status);
+    res.json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const confirmReceived = async (req, res, next) => {
+  try {
+    const data = await orderService.confirmReceived(req.user.id, Number(req.params.id));
+    res.json(data);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
-  checkout
+  checkout,
+  getMyOrders,
+  getMyOrder,
+  getDeliveryOrders,
+  updateDeliveryStatus,
+  confirmReceived
 };

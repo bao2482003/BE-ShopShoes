@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
   full_name VARCHAR(120) NOT NULL,
   email VARCHAR(120) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
-  role ENUM('ADMIN', 'USER') DEFAULT 'USER',
+  role ENUM('ADMIN', 'STAFF', 'USER') DEFAULT 'USER',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS cart_items (
 CREATE TABLE IF NOT EXISTS orders (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
-  status ENUM('PENDING', 'PAID', 'SHIPPING', 'COMPLETED', 'CANCELLED') DEFAULT 'PENDING',
+  status ENUM('PENDING', 'PAID', 'SHIPPING', 'WAITING_RECEIVED', 'COMPLETED', 'DONE', 'CANCELLED') DEFAULT 'PENDING',
   total_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
   shipping_address VARCHAR(255) NOT NULL,
   phone_number VARCHAR(20) NOT NULL,
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS payments (
   id INT AUTO_INCREMENT PRIMARY KEY,
   order_id INT NOT NULL,
   method ENUM('COD', 'VNPAY') NOT NULL,
-  status ENUM('PENDING', 'PAID', 'FAILED') NOT NULL DEFAULT 'PENDING',
+  status ENUM('PENDING', 'PAID', 'DONE', 'FAILED') NOT NULL DEFAULT 'PENDING',
   amount DECIMAL(12,2) NOT NULL,
   transaction_ref VARCHAR(80) NOT NULL UNIQUE,
   vnp_transaction_no VARCHAR(120),
@@ -114,10 +114,16 @@ CREATE TABLE IF NOT EXISTS payments (
   UNIQUE KEY uk_payment_order (order_id)
 );
 
+ALTER TABLE orders
+MODIFY COLUMN status ENUM('PENDING', 'PAID', 'SHIPPING', 'WAITING_RECEIVED', 'COMPLETED', 'DONE', 'CANCELLED') DEFAULT 'PENDING';
+
+ALTER TABLE payments
+MODIFY COLUMN status ENUM('PENDING', 'PAID', 'DONE', 'FAILED') NOT NULL DEFAULT 'PENDING';
+
 -- Password for this seed account: Admin@123
 INSERT INTO users (full_name, email, password, role)
 VALUES (
-  'System Admin',
+  'Admin',
   'admin@gmail.com',
   '$2a$10$Ev9df5Sy1TtSRROTuiEk0eQ9wJn4V/Vo9WrZbjuaML7BKATfDlj1.',
   'ADMIN'

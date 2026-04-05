@@ -97,6 +97,23 @@ CREATE TABLE IF NOT EXISTS order_items (
   FOREIGN KEY (variant_id) REFERENCES product_variants(id)
 );
 
+CREATE TABLE IF NOT EXISTS payments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id INT NOT NULL,
+  method ENUM('COD', 'VNPAY') NOT NULL,
+  status ENUM('PENDING', 'PAID', 'FAILED') NOT NULL DEFAULT 'PENDING',
+  amount DECIMAL(12,2) NOT NULL,
+  transaction_ref VARCHAR(80) NOT NULL UNIQUE,
+  vnp_transaction_no VARCHAR(120),
+  vnp_response_code VARCHAR(10),
+  pay_url TEXT,
+  paid_at DATETIME NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+  UNIQUE KEY uk_payment_order (order_id)
+);
+
 -- Password for this seed account: Admin@123
 INSERT INTO users (full_name, email, password, role)
 VALUES (
